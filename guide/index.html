@@ -1,0 +1,370 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>名刺管理君 導入手順書</title>
+  <meta name="description" content="名刺管理君を自社の Google Workspace に入れて、社員のスマホで使えるようにするまでの手順です。">
+  <meta name="theme-color" content="#E7741D">
+  <meta name="referrer" content="no-referrer">
+  <link rel="icon" href="../icons/icon-192.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="bar">
+    <div class="inner">
+      <h1>名刺管理君 導入手順書</h1>
+      <p>Google Workspace の申し込みから、社員のスマホで使い始めるまで</p>
+    </div>
+  </header>
+
+  <main>
+    <h2 id="intro">はじめに</h2>
+    <p>名刺管理君は、スマホで名刺を撮るだけで、名前・会社・電話番号などを読み取って会社の名刺台帳に登録するアプリです。登録した名刺は、同じ会社の社員だけが見られます。ほかの会社の人や、Kamo's BASE（提供元）は見られません。</p>
+    <p>名刺の台帳と画像は、御社の Google Workspace の中（共有ドライブ）に保存されます。この手順書では、Google Workspace を契約していない状態から、社員のスマホで使い始めるまでを順に説明します。</p>
+
+    <h3>用意するもの</h3>
+    <ul>
+      <li>パソコン（手順1〜9はパソコンで行います）</li>
+      <li>会社のドメイン（例：<code>example.co.jp</code>）。持っていない場合は、手順1の申し込みの途中で取得できます</li>
+      <li>クレジットカード（Google Workspace と Gemini API の支払いに使います）</li>
+      <li>Kamo's BASE からお渡しする「プログラムのコピー用リンク」</li>
+      <li>社員のスマホ（iPhone または Android）</li>
+    </ul>
+
+    <h3>かかる費用</h3>
+    <div class="scroll">
+    <table>
+      <tr><th>何の費用</th><th>支払い先</th><th>目安</th></tr>
+      <tr><td>Google Workspace</td><td>Google</td><td>Business Starter の年間プランで、1人あたり月800円（税別）。名刺管理君はこのプランで使えます。14日間の無料試用があります</td></tr>
+      <tr><td>Gemini API（名刺の読み取り・AIに相談）</td><td>Google</td><td>前払い制で、最初に5ドル（約750円）以上を入金します。名刺1枚の読み取りは1円未満の見込みです（Google の公開料金からの試算）</td></tr>
+      <tr><td>独自ドメイン（持っていない場合）</td><td>申し込みの途中で購入（販売元は Squarespace）</td><td>1年分の料金を購入時に払います。金額は購入画面に出ます</td></tr>
+    </table>
+    </div>
+    <p>上の金額は 2026年10月28日に各社の公式ページで確かめたものです。料金は変わることがあるので、申し込む前に <a href="https://workspace.google.com/intl/ja/pricing.html" target="_blank" rel="noopener">Google Workspace の料金ページ</a> などで最新の金額を確かめてください。</p>
+
+    <h3>作業の流れ</h3>
+    <nav class="toc">
+      <ol>
+        <li><a href="#s1">Google Workspace を申し込む</a><span class="who">代表者</span></li>
+        <li><a href="#s2">社員のアカウントを作る</a><span class="who">代表者</span></li>
+        <li><a href="#s3">共有ドライブ・フォルダ・スプレッドシートを作る</a><span class="who">代表者</span></li>
+        <li><a href="#s4">Gemini の API キーを作る</a><span class="who">代表者</span></li>
+        <li><a href="#s5">プログラムをコピーする</a><span class="who">代表者</span></li>
+        <li><a href="#s6">プログラムに設定を入れる</a><span class="who">代表者</span></li>
+        <li><a href="#s7">台帳の見出しを作る（初回の承認）</a><span class="who">代表者</span></li>
+        <li><a href="#s8">アプリとして公開する</a><span class="who">代表者</span></li>
+        <li><a href="#s9">社員に配るリンクを作る</a><span class="who">代表者</span></li>
+        <li><a href="#s10">スマホに入れてログインする</a><span class="who all">社員全員</span></li>
+        <li><a href="#s11">使い方</a><span class="who all">社員全員</span></li>
+        <li><a href="#s12">困ったとき</a></li>
+      </ol>
+    </nav>
+    <div class="note">
+      <strong>「代表者」について</strong>
+      手順1〜9は、会社を代表する1つのアカウント（以下「代表アカウント」）で行います。名刺を読み取るプログラムは、このアカウントの権限で動きます。登録した名刺は、このアカウントの Google 連絡先にも入ります。退職などで使えなくならないアカウント（社長や会社の共用アカウント）を選んでください。
+    </div>
+
+    <!-- 1 -->
+    <h2 id="s1">1. Google Workspace を申し込む</h2>
+    <p>Google Workspace は、会社のメールアドレス（例：<code>yamada@example.co.jp</code>）で使える Google の有料サービスです。名刺管理君は、Google Workspace の共有ドライブとスプレッドシートに名刺を保存します。</p>
+    <ol class="steps">
+      <li>パソコンで <a href="https://workspace.google.com/business/signup/welcome?hl=ja" target="_blank" rel="noopener">Google Workspace の申し込みページ</a> を開きます。</li>
+      <li><span class="ui">会社名</span> を入れ、<span class="ui">自分を含む従業員の数</span> を選び、<span class="ui">地域</span> が <span class="ui">日本</span> になっていることを確かめて、<span class="ui">次へ</span> を押します。
+        <figure><img src="img/w-signup1.png" alt="Google Workspace の申し込みの最初の画面。次へに赤い枠" loading="lazy" style="width:340px"></figure>
+      </li>
+      <li>このあとは画面の案内に沿って、連絡先、ドメイン、管理者のアカウント（ユーザー名とパスワード）、支払い情報を入れます。
+        <ul>
+          <li><strong>ドメイン</strong>：会社のドメインを持っていれば、それを入れます。持っていなければ、その場でドメインを購入できます。</li>
+          <li><strong>管理者のアカウント</strong>：ここで作るアカウントが、この手順書でいう「代表アカウント」です。</li>
+          <li><strong>プラン</strong>：Business Starter で使えます。</li>
+        </ul>
+      </li>
+    </ol>
+    <div class="note">
+      <strong>無料試用について</strong>
+      14日間、10人まで無料で試せます。申し込みのときに支払い情報の登録が必要で、試用が終わると自動で有料に切り替わります。
+    </div>
+    <div class="warn">
+      <strong>ドメインまわりの期限に注意</strong>
+      ・申し込みの途中でドメインを購入した場合：確認のメールが届きます。15日以内に返信しないとドメインが止まり、メールが使えなくなります。購入したドメインはキャンセルできません。<br>
+      ・すでに持っているドメインを使う場合：そのドメインが御社のものであることの証明が必要です。Google の設定画面に出る確認用の文字列を、ドメインを買った会社の設定画面に登録します。申し込んだら、早めに済ませてください。<br>
+      詳しくは Google のヘルプ <a href="https://knowledge.workspace.google.com/admin/domains/purchase-a-domain-when-you-sign-up-for-google-services?hl=ja" target="_blank" rel="noopener">申し込み時にドメインを購入する</a>・<a href="https://knowledge.workspace.google.com/admin/domains/verify-your-domain-for-google-workspace?hl=ja" target="_blank" rel="noopener">ドメインの所有権を証明する</a> を見てください。
+    </div>
+    <div class="note">
+      <strong>Gmail のアドレスでは申し込まない</strong>
+      Gmail のアドレス（<code>@gmail.com</code>）でも申し込めますが、その場合は1人でしか使えず、社員を追加できません。名刺管理君を会社で使うには、会社のドメインで申し込んでください。
+    </div>
+
+    <!-- 2 -->
+    <h2 id="s2">2. 社員のアカウントを作る</h2>
+    <p>名刺管理君を使う社員ごとに、会社のメールアドレス（例：<code>suzuki@example.co.jp</code>）を作ります。</p>
+    <ol class="steps">
+      <li>パソコンで <a href="https://admin.google.com/ac/users" target="_blank" rel="noopener">管理コンソールのユーザー一覧</a> を開きます（代表アカウントでログイン）。</li>
+      <li><span class="ui">新しいユーザーの追加</span> を押します。
+        <figure><img src="img/g-adm-users.png" alt="管理コンソールのユーザー一覧。新しいユーザーの追加に赤い枠" loading="lazy"><figcaption>管理コンソール ＞ ディレクトリ ＞ ユーザー</figcaption></figure>
+      </li>
+      <li><span class="ui">姓</span><span class="ui">名</span><span class="ui">メインのメールアドレス</span> を入れ、<span class="ui">新しいユーザーの追加</span> を押します。
+        <figure><img src="img/g-adm-adduser.png" alt="新しいユーザーの追加の画面" loading="lazy"><figcaption>@ の右には御社のドメインが出ます</figcaption></figure>
+      </li>
+      <li>追加が終わると、ログインの案内の画面が出ます。<span class="ui">パスワードをコピー</span> で控えて本人に伝えるか、<span class="ui">プレビューして送信</span> で本人のメールに送り、<span class="ui">完了</span> を押します。</li>
+    </ol>
+    <div class="note"><strong>費用について</strong>社員のアカウントを1つ作るごとに、Google Workspace の料金が1人分かかります。</div>
+
+    <!-- 3 -->
+    <h2 id="s3">3. 共有ドライブ・フォルダ・スプレッドシートを作る</h2>
+    <p>名刺の台帳（スプレッドシート）と画像を入れる場所を作ります。共有ドライブに入れたものは、メンバーに加えた社員全員が見られます。</p>
+
+    <h3>3-1. 共有ドライブを作る</h3>
+    <ol class="steps">
+      <li>パソコンで <a href="https://drive.google.com/drive/shared-drives" target="_blank" rel="noopener">Google ドライブの共有ドライブ</a> を開き、左上の <span class="ui">新規</span> を押します。
+        <figure><img src="img/g-drive-new.png" alt="共有ドライブの画面。新規に赤い枠" loading="lazy"></figure>
+      </li>
+      <li>名前に <code>名刺管理</code> と入れ、<span class="ui">作成</span> を押します。
+        <figure><img src="img/g-drive-create.png" alt="新しい共有ドライブの画面" loading="lazy" style="width:360px"></figure>
+      </li>
+    </ol>
+
+    <h3>3-2. 社員をメンバーに加える</h3>
+    <ol class="steps">
+      <li>作った共有ドライブを開き、<span class="ui">メンバーを管理</span> を押します。
+        <figure><img src="img/g-drive-members-btn.png" alt="共有ドライブの画面。メンバーを管理に赤い枠" loading="lazy"></figure>
+      </li>
+      <li><span class="ui">ユーザーやグループを追加</span> に社員のメールアドレスを入れ、<span class="ui">送信</span> を押します。権限は最初に選ばれているもの（コンテンツ管理者）のままでかまいません。
+        <figure><img src="img/g-drive-members.png" alt="メンバーを管理の画面。ユーザーやグループを追加に赤い枠" loading="lazy" style="width:520px"></figure>
+      </li>
+    </ol>
+    <div class="note"><strong>アプリで見るだけなら</strong>名刺管理君のアプリで名刺を見たり登録したりするだけなら、共有ドライブのメンバーに入っていなくても使えます。メンバーに加えると、スプレッドシートや画像をドライブで直接見られるようになります。</div>
+
+    <h3>3-3. フォルダとスプレッドシートを作る</h3>
+    <ol class="steps">
+      <li>共有ドライブ <code>名刺管理</code> を開いたまま、<span class="ui">新規</span> ＞ <span class="ui">新しいフォルダ</span> で、<code>名刺画像</code> という名前のフォルダを作ります。</li>
+      <li>同じく <span class="ui">新規</span> ＞ <span class="ui">Google スプレッドシート</span> ＞ <span class="ui">空白のスプレッドシート</span> で、スプレッドシートを作ります。名前は <code>名刺管理</code> にします（ほかの名前でもかまいません）。
+        <figure><img src="img/g-drive-newmenu.png" alt="新規メニュー。新しいフォルダと Google スプレッドシートに赤い枠" loading="lazy" style="width:340px"></figure>
+      </li>
+    </ol>
+
+    <h3>3-4. IDを控える</h3>
+    <p>手順6で使うため、スプレッドシートとフォルダの「ID」を控えます。IDは、開いたときのブラウザのアドレス欄に入っている英数字です。黄色の部分をコピーして、メモ帳などに貼っておいてください。</p>
+    <p><strong>スプレッドシートのID</strong>（スプレッドシートを開いたときのアドレス）</p>
+    <div class="url">https://docs.google.com/spreadsheets/d/<span class="id">1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789</span>/edit</div>
+    <p><strong>フォルダのID</strong>（フォルダ <code>名刺画像</code> を開いたときのアドレス）</p>
+    <div class="url">https://drive.google.com/drive/folders/<span class="id">1XyZaBcDeFgHiJkLmNoPqRsTuVwX</span></div>
+    <p>上の英数字は例です。御社のものは、文字も長さも違います。</p>
+
+    <h3>3-5. 社外の人と共有できないようにする（おすすめ）</h3>
+    <p>社員がうっかり名刺の台帳や画像を社外の人と共有しないよう、会社全体で社外への共有を止めておきます。</p>
+    <ol class="steps">
+      <li><a href="https://admin.google.com/" target="_blank" rel="noopener">管理コンソール</a> を開き、<span class="ui">アプリ</span> ＞ <span class="ui">Google Workspace</span> ＞ <span class="ui">ドライブとドキュメント</span> を開きます。</li>
+      <li><span class="ui">共有設定</span> の <span class="ui">共有オプション</span> で、社外との共有を <span class="ui">オフ</span> にして保存します。</li>
+    </ol>
+    <p>詳しくは Google のヘルプ <a href="https://knowledge.workspace.google.com/admin/drive/manage-external-sharing-for-your-organization?hl=ja" target="_blank" rel="noopener">組織の外部共有を管理する</a> を見てください。社外の取引先とドライブでファイルを共有している場合は、オフにすると共有できなくなるので、社内で相談してから決めてください。</p>
+
+    <!-- 4 -->
+    <h2 id="s4">4. Gemini の API キーを作る</h2>
+    <p>名刺の文字の読み取りと「AIに相談」には、Google の AI（Gemini）を使います。使うための鍵（API キー）を、代表アカウントで作ります。</p>
+
+    <h3>4-1. API キーを作る</h3>
+    <ol class="steps">
+      <li>代表アカウントでログインしたまま、<a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio の API キーのページ</a> を開きます。</li>
+      <li>右上の <span class="ui">API キーを作成</span> を押します。
+        <figure><img src="img/g-ai-keys.png" alt="Google AI Studio の API キーの画面。API キーを作成に赤い枠" loading="lazy"><figcaption>一覧の行は例です</figcaption></figure>
+      </li>
+      <li><span class="ui">キー名の設定</span> に <code>名刺管理君</code> と入れ、<span class="ui">キーを作成</span> を押します。<span class="ui">インポートしたプロジェクトを選択</span> は、最初に選ばれているままでかまいません。
+        <figure><img src="img/g-ai-create.png" alt="新しいキーを作成する画面" loading="lazy" style="width:420px"></figure>
+      </li>
+      <li>一覧に増えたキーの行で、右側の四角が2つ重なったアイコン（<span class="ui">API キーのコピー</span>）を押すと、キーがコピーされます。メモ帳などに貼って控えます（手順6で使います）。</li>
+    </ol>
+
+    <h3>4-2. 有料枠にする（必ず行ってください）</h3>
+    <p>一覧の <span class="ui">請求階層</span> の欄を見ます。<code>Tier 1</code> などと出ていれば、有料枠になっています。無料枠のままになっている場合は、その欄から支払い方法を登録します。最初に5ドル（約750円）以上を前払いします。</p>
+    <div class="warn">
+      <strong>無料枠のままでは使わないでください</strong>
+      無料枠では、送った内容（名刺の画像や文字）が Google のサービス改善に使われ、人が読むこともあると Google の利用規約に書かれています。名刺は個人情報なので、必ず有料枠にしてください。有料枠では、送った内容はサービス改善に使われません（<a href="https://ai.google.dev/gemini-api/terms" target="_blank" rel="noopener">Gemini API の利用規約</a>）。
+    </div>
+    <div class="note">
+      <strong>前払いの残高に注意</strong>
+      前払いの残高がなくなると、API キーが止まり、名刺の読み取りができなくなります。左の <span class="ui">利用額</span> で、ときどき残高を確かめてください。前払いした分は、使わないまま12か月たつと失効します（<a href="https://ai.google.dev/gemini-api/docs/billing?hl=ja" target="_blank" rel="noopener">Gemini API の課金</a>）。
+    </div>
+
+    <!-- 5 -->
+    <h2 id="s5">5. プログラムをコピーする</h2>
+    <ol class="steps">
+      <li>代表アカウントでログインしたまま、Kamo's BASE からお渡しした「プログラムのコピー用リンク」を開きます。</li>
+      <li><span class="ui">プロジェクトの詳細</span> の画面が開きます。右上の <span class="ui">コピーを作成</span>（四角が2つ重なった形のボタン）を押します。別の画面が開いたときは、左の <span class="ui">概要</span>（ⓘ のアイコン）を押すと、この画面になります。
+        <figure><img src="img/g-gas-copy.png" alt="Apps Script のプロジェクトの詳細。コピーを作成に赤い枠" loading="lazy"></figure>
+      </li>
+      <li>コピーが開きます。左上の名前を押すと、名前を変えられます。<code>名刺管理君</code> にしておくとわかりやすいです。</li>
+    </ol>
+    <div class="note"><strong>コピーしたプログラムは御社のもの</strong>コピーは代表アカウントのマイドライブに作られ、御社のアカウントで動きます。Kamo's BASE からは見えません。</div>
+
+    <!-- 6 -->
+    <h2 id="s6">6. プログラムに設定を入れる</h2>
+    <p>手順3・4で控えた値を、プログラムに登録します。</p>
+    <ol class="steps">
+      <li>コピーしたプログラムの画面で、左の歯車 <span class="ui">プロジェクトの設定</span> を押します。</li>
+      <li>下の方の <span class="ui">スクリプト プロパティ</span> で、<span class="ui">スクリプト プロパティを追加</span> を押し、次の5つを1つずつ入れます。<span class="ui">プロパティ</span> に左の名前を、<span class="ui">値</span> に右の値を入れます。</li>
+    </ol>
+    <div class="scroll">
+    <table>
+      <tr><th>プロパティ</th><th>値</th></tr>
+      <tr><td><code>GEMINI_API_KEY</code></td><td>手順4で作った API キー</td></tr>
+      <tr><td><code>SPREADSHEET_ID</code></td><td>手順3-4で控えたスプレッドシートのID</td></tr>
+      <tr><td><code>DRIVE_FOLDER_ID</code></td><td>手順3-4で控えたフォルダのID</td></tr>
+      <tr><td><code>GOOGLE_CLIENT_ID</code></td><td><code>456836034516-dsddn674o4pv00tng23rj3h22c3u7oaa.apps.googleusercontent.com</code><br>（全社共通の値です。このままコピーしてください）</td></tr>
+      <tr><td><code>ALLOWED_DOMAIN</code></td><td>御社のドメイン（例：<code>example.co.jp</code>）。ここに書いたドメインのアカウントだけがログインできます</td></tr>
+    </table>
+    </div>
+    <ol class="steps" start="3">
+      <li>5つ入れたら、<span class="ui">スクリプト プロパティを保存</span> を押します。押し忘れると、入れた値が消えます。
+        <figure><img src="img/g-gas-props.png" alt="スクリプト プロパティを保存したあとの画面" loading="lazy" style="width:560px"><figcaption>保存したあとの画面（値は例です）。直すときは <span class="ui">スクリプト プロパティを編集</span> を押します</figcaption></figure>
+      </li>
+    </ol>
+    <div class="warn"><strong>API キーは人に見せない</strong>API キーは、御社の Gemini の利用料金につながる鍵です。メールやチャットに貼ったり、人に見せたりしないでください。</div>
+
+    <!-- 7 -->
+    <h2 id="s7">7. 台帳の見出しを作る（初回の承認）</h2>
+    <p>プログラムを一度動かして、スプレッドシートに見出しの行を作ります。このとき、プログラムがドライブや連絡先を使うことを、代表アカウントで許可します。</p>
+    <ol class="steps">
+      <li>左の <span class="ui">&lt;&gt;</span>（エディタ）を押し、ファイルの一覧から <code>main.gs</code> を押します。</li>
+      <li>上の関数の選択欄で <code>setup</code> を選び、<span class="ui">実行</span> を押します。
+        <figure><img src="img/g-gas-run.png" alt="main.gs を開き、関数の選択欄で setup を選んだところ。実行に赤い枠" loading="lazy"></figure>
+      </li>
+      <li>初めて実行するときは、プログラムがドライブ・スプレッドシート・連絡先などを使ってよいか、許可を求める画面が出ます。代表アカウントを選び、内容を確かめて許可します。許可は最初の1回だけです。</li>
+      <li>下に <span class="ui">実行ログ</span> が開き、<code>setupSheet: ヘッダー行を作成/更新しました。</code> と出たら完了です。スプレッドシートの1行目に「登録日時」「名前(日本語)」などの見出しが入ります。</li>
+    </ol>
+
+    <!-- 8 -->
+    <h2 id="s8">8. アプリとして公開する</h2>
+    <ol class="steps">
+      <li>右上の <span class="ui">デプロイ</span> ＞ <span class="ui">新しいデプロイ</span> を押します。
+        <figure><img src="img/g-gas-deploy-menu.png" alt="デプロイのメニュー。新しいデプロイに赤い枠" loading="lazy" style="width:420px"></figure>
+      </li>
+      <li>次のようになっているか確かめて、<span class="ui">デプロイ</span> を押します。
+        <ul>
+          <li><span class="ui">種類の選択</span>：<span class="ui">ウェブアプリ</span>（出ていなければ、歯車を押して選びます）</li>
+          <li><span class="ui">次のユーザーとして実行</span>：<span class="ui">自分</span>（代表アカウント）</li>
+          <li><span class="ui">アクセスできるユーザー</span>：<span class="ui">全員</span></li>
+        </ul>
+        <figure><img src="img/g-gas-deploy.png" alt="新しいデプロイの画面。次のユーザーとして実行、アクセスできるユーザー、デプロイに赤い枠" loading="lazy" style="width:600px"></figure>
+      </li>
+      <li>許可を求める画面が出たときは、手順7と同じように許可します。</li>
+      <li>表示された <span class="ui">ウェブアプリ</span> の URL（<code>https://script.google.com/macros/s/…/exec</code>）をコピーして控えます。手順9で使います。</li>
+    </ol>
+    <div class="note"><strong>「全員」にしても、名刺は誰でも見られるわけではありません</strong>スマホのアプリからプログラムに届くようにするために「全員」にします。プログラムは、届いた要求ごとに「御社のドメインの Google アカウントでログインしているか」を確かめ、違う場合は何も返しません。</div>
+
+    <!-- 9 -->
+    <h2 id="s9">9. 社員に配るリンクを作る</h2>
+    <p>次のURLの <code>ここにウェブアプリのURL</code> の部分を、手順8で控えたURLに置き換えます。これが「設定用リンク」です。社員にメールやチャットで送ります。</p>
+    <div class="url">https://hisao-k.github.io/meishi-kanri-app/?api=<span class="id">ここにウェブアプリのURL</span></div>
+    <p>例：</p>
+    <div class="url">https://hisao-k.github.io/meishi-kanri-app/?api=https://script.google.com/macros/s/AKfyc…/exec</div>
+    <div class="note"><strong>設定用リンクを送ってよい相手</strong>設定用リンクを開いても、御社のアカウントでログインできなければ名刺は見られません。それでも、送る相手は社員だけにしてください。</div>
+
+    <!-- 10 -->
+    <h2 id="s10">10. スマホに入れてログインする</h2>
+    <p>ここからは、名刺管理君を使う社員それぞれが、自分のスマホで行います。</p>
+    <ol class="steps">
+      <li>手順9の「設定用リンク」を、スマホで開きます。iPhone は Safari、Android は Chrome で開いてください。<span class="ui">ログイン</span> の画面が出ます。
+        <figure class="phone"><img src="img/app-login.png" alt="名刺管理君のログイン画面" loading="lazy"></figure>
+      </li>
+      <li>ログインする前に、この画面をホーム画面に追加します。
+        <ul>
+          <li><strong>iPhone（iOS 26）</strong>：Safari の <span class="ui">その他</span> ボタン ＞ <span class="ui">共有</span> を押し、下へ動かして <span class="ui">ホーム画面に追加</span> を押します。<span class="ui">Webアプリとして開く</span> をオンにして、<span class="ui">追加</span> を押します。</li>
+          <li><strong>iPhone（iOS 27）</strong>：iOS 26 とほぼ同じです。ボタンの名前が <span class="ui">ページメニュー</span>、スイッチの名前が <span class="ui">ウェブアプリとして開く</span> に変わっています。</li>
+          <li><strong>iPhone（iOS 18）</strong>：Safari の共有ボタン（四角から上向きの矢印が出ている形）を押し、下へ動かして <span class="ui">ホーム画面に追加</span> を押します。</li>
+          <li><strong>Android</strong>：Chrome の右上の︙（縦に点が3つ）を押し、メニューからホーム画面に追加する項目を選びます。</li>
+        </ul>
+        iPhone の操作は、iOS の版によって表示が少し違います。詳しくは Apple のサポート <a href="https://support.apple.com/ja-jp/guide/iphone/iphea86e5236/26/ios/26" target="_blank" rel="noopener">Safari で Web サイトをホーム画面に追加する</a> を見てください。
+      </li>
+      <li>ホーム画面に増えた <span class="ui">名刺管理君</span> のアイコンから開き、<span class="ui">Google でログイン</span> を押して、会社のアカウント（手順2で作ったもの）でログインします。</li>
+    </ol>
+    <div class="note">
+      <strong>ホーム画面のアイコンから開いて、もう一度ログイン</strong>
+      iPhone では、ホーム画面のアイコンから開いたアプリと Safari は、ログインの状態を別々に持っています。Safari でログインしていても、アイコンから開いたら、もう一度ログインしてください。
+    </div>
+    <div class="note">
+      <strong>「はじめの設定」が出たとき</strong>
+      設定用リンクを使わずに開くと、<span class="ui">はじめの設定</span> の画面が出ます。ホーム画面のアイコンを削除し、設定用リンクから開き直して、もう一度ホーム画面に追加してください。
+      <figure class="phone"><img src="img/app-setup.png" alt="はじめの設定の画面" loading="lazy"></figure>
+    </div>
+
+    <!-- 11 -->
+    <h2 id="s11">11. 使い方</h2>
+
+    <h3>名刺を1枚登録する</h3>
+    <ol class="steps">
+      <li><span class="ui">登録</span> を押し、<span class="ui">片面</span>（表だけ）か <span class="ui">両面</span>（表と裏）を選びます。</li>
+      <li><span class="ui">表面を撮る</span>（両面なら <span class="ui">裏面を撮る</span> も）を押して名刺を撮り、<span class="ui">登録する</span> を押します。</li>
+      <li>読み取った内容が出たら完了です。続けて <span class="ui">顔写真を追加</span> や <span class="ui">コメントを追加</span> もできます。</li>
+    </ol>
+    <figure class="row">
+      <img src="img/app-register-front.png" alt="片面で表を撮ったところ" loading="lazy">
+      <img src="img/app-register-done.png" alt="登録が終わったところ" loading="lazy">
+    </figure>
+
+    <h3>名刺をまとめて登録する</h3>
+    <p>交流会などで名刺がたくさんあるときに使います。全部の名刺に同じコメント（例：「守成クラブ 例会で名刺交換」）を付けられます。</p>
+    <ol class="steps">
+      <li><span class="ui">まとめて</span> を選び、<span class="ui">📷 1枚目の表を撮る</span> を押します。</li>
+      <li>表を撮ると、表の右に <span class="ui">📷 裏を撮る</span>、下に <span class="ui">📷 次の名刺（2枚目）の表を撮る</span> が出ます。裏がある名刺は裏を撮り、なければ次の名刺へ進みます。</li>
+      <li>全部撮ったら、必要ならコメントを書き、<span class="ui">まとめて登録する</span> を押します。</li>
+    </ol>
+    <figure class="row">
+      <img src="img/app-batch-2.png" alt="まとめて登録で2枚撮ったところ" loading="lazy">
+      <img src="img/app-batch-done.png" alt="まとめて登録が終わったところ" loading="lazy">
+    </figure>
+    <p>すでに登録してある名刺（名前と会社名が同じもの）は、二重に登録されず「登録済みの名刺でした」と出ます。</p>
+
+    <h3>名刺を探す</h3>
+    <ol class="steps">
+      <li><span class="ui">探す</span> を押し、探す項目（<span class="ui">名前</span>・<span class="ui">会社</span>・<span class="ui">フリー</span>）にチェックを入れます。</li>
+      <li>言葉を入れて <span class="ui">探す</span> を押します。🎤 を押すと、声でも入れられます。</li>
+      <li>出てきた名刺を押すと、詳しい内容と名刺の画像が見られます。</li>
+    </ol>
+    <figure class="row">
+      <img src="img/app-search.png" alt="会社で福岡を探したところ" loading="lazy">
+      <img src="img/app-detail.png" alt="名刺の詳細" loading="lazy">
+    </figure>
+
+    <h3>AIに相談する</h3>
+    <p>やりたいことを文章で書くと、登録した名刺の中から合いそうな会社・人を選びます。判断の材料は、名刺とコメントに書いてあることだけです。</p>
+    <figure class="phone"><img src="img/app-ask.png" alt="AIに相談の画面" loading="lazy"></figure>
+
+    <h3>使い終わったら</h3>
+    <p>右上の <span class="ui">閉じる</span> を押すとログアウトし、画面の名刺も消えます。スマホを人に渡すときなどに使ってください。次に開いたときは、ログインからになります。</p>
+
+    <!-- 12 -->
+    <h2 id="s12">12. 困ったとき</h2>
+    <div class="scroll">
+    <table>
+      <tr><th>こんなとき</th><th>確かめること</th></tr>
+      <tr><td>アプリを開くと <span class="ui">はじめの設定</span> が出る</td><td>設定用リンクから開き直してください（手順10）。</td></tr>
+      <tr><td><code>ログインを確認できませんでした。</code> と出る</td><td>会社のアカウント（手順2で作ったもの）でログインしているか確かめてください。代表者は、手順6の <code>ALLOWED_DOMAIN</code> が御社のドメインと同じつづりか確かめてください。</td></tr>
+      <tr><td><code>E004: 名刺情報の読み取りに失敗しました。</code> と出る</td><td>明るい場所で、名刺が画面いっぱいに写るように撮り直してください。何度撮っても出る場合は、代表者が手順4の API キーと前払いの残高を確かめてください。</td></tr>
+      <tr><td><code>E002: 同じ名刺がすでに登録されています。</code> と出る</td><td>名前と会社名が同じ名刺が、すでに登録されています。<span class="ui">登録済みの名刺を開く</span> で中身を見られます。</td></tr>
+      <tr><td><code>E005: スプレッドシートへの書き込みに失敗しました。</code> と出る</td><td>代表者が、手順6の <code>SPREADSHEET_ID</code> と、手順7（setup の実行）が済んでいるかを確かめてください。</td></tr>
+      <tr><td><code>E003: 画像の保存に失敗しました。</code> と出る</td><td>代表者が、手順6の <code>DRIVE_FOLDER_ID</code> を確かめてください。フォルダが共有ドライブの中にあり、代表アカウントがその共有ドライブのメンバーである必要があります。</td></tr>
+      <tr><td>エラーに <code>ScriptProperty "…" が設定されていません。</code> と出る</td><td>手順6で、その名前のスクリプト プロパティが抜けています。入れて <span class="ui">スクリプト プロパティを保存</span> を押してください。</td></tr>
+      <tr><td>スクリプト プロパティを直したあと</td><td>直した値は、保存した時点から効きます。もう一度デプロイ（手順8）する必要はありません。</td></tr>
+    </table>
+    </div>
+    <p>上で解決しないときは、表示された文章（<code>[原因]</code> の行を含む）を控えて、Kamo's BASE にお問い合わせください。</p>
+
+    <footer>
+      名刺管理君（Kamo's BASE）　この手順書の内容は 2026年10月時点のものです。Google の画面や料金は変わることがあります。画面の画像は押すと大きく表示されます。
+    </footer>
+  </main>
+  <script>
+    // 画面の画像を押すと、別のタブで原寸表示する（スマホで小さい文字を読むため）
+    document.querySelectorAll('figure img').forEach(function (img) {
+      var a = document.createElement('a');
+      a.href = img.getAttribute('src');
+      a.target = '_blank';
+      a.rel = 'noopener';
+      img.parentNode.insertBefore(a, img);
+      a.appendChild(img);
+    });
+  </script>
+</body>
+</html>
