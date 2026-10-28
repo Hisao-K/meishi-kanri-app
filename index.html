@@ -95,10 +95,11 @@
 
       <!-- 探す -->
       <div id="tab-search" class="tab" hidden>
-        <div class="seg" role="radiogroup" aria-label="探す対象">
-          <label><input type="radio" name="field" value="name" checked> 名前</label>
-          <label><input type="radio" name="field" value="company"> 会社</label>
-          <label><input type="radio" name="field" value="free"> フリー</label>
+        <p class="field">探す項目（チェックした項目の中を探します）</p>
+        <div class="seg" role="group" aria-label="探す項目">
+          <label><input type="checkbox" name="field" value="name" checked> 名前</label>
+          <label><input type="checkbox" name="field" value="company"> 会社</label>
+          <label><input type="checkbox" name="field" value="free"> フリー</label>
         </div>
         <p id="search-hint" class="hint"></p>
         <div class="row">

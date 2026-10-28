@@ -547,35 +547,44 @@
   // =========================
   //  探す
   // =========================
+  // 探す項目（チェックボックス）。チェックした項目を合わせて探す
   var SEARCH_FIELDS = {
-    name:    { hint: '名前で探します。姓だけでも探せます。姓と名の間の空白は、あってもなくてもかまいません。', placeholder: '例：田中' },
-    company: { hint: '会社名で探します。「ニッサン」でも「日産」が見つかります。', placeholder: '例：ニッサン' },
-    free:    { hint: '名前・会社名・仕事内容・裏面・コメントのどこかに入っている言葉で探します。', placeholder: '例：補助金' },
+    name:    { hint: '名前（姓だけでも可。姓と名の間の空白はあってもなくてもよい）', placeholder: '例：田中' },
+    company: { hint: '会社名（「ニッサン」でも「日産」が見つかる）', placeholder: '例：ニッサン' },
+    free:    { hint: '名前・会社名・仕事内容・裏面・コメントのどこか', placeholder: '例：補助金' },
   };
 
-  function searchField() { return document.querySelector('input[name="field"]:checked').value; }
+  function searchFields() {
+    return Array.prototype.map.call(document.querySelectorAll('input[name="field"]:checked'), function (c) { return c.value; });
+  }
 
   function refreshSearch() {
-    var f = SEARCH_FIELDS[searchField()];
-    $('search-hint').textContent = f.hint;
-    $('search-input').placeholder = f.placeholder;
+    var fields = searchFields();
+    $('search-hint').textContent = fields.length
+      ? fields.map(function (f) { return '・' + SEARCH_FIELDS[f].hint; }).join('\n')
+      : '探す項目を1つ以上チェックしてください。';
+    $('search-input').placeholder = fields.length ? SEARCH_FIELDS[fields[0]].placeholder : '';
+    $('do-search').disabled = !fields.length;
   }
 
   document.querySelectorAll('input[name="field"]').forEach(function (r) {
     r.addEventListener('change', function () {
       refreshSearch();
-      // 選び直したら、入っている言葉でそのまま探し直す
-      if ($('search-input').value.trim()) $('do-search').click();
+      // 選び直したら、入っている言葉でそのまま探し直す。全部外したら前の結果を消す
+      if (!searchFields().length) { $('search-results').replaceChildren(); msg('search-msg', ''); }
+      else if ($('search-input').value.trim()) $('do-search').click();
     });
   });
 
   $('do-search').addEventListener('click', function () {
     var keyword = $('search-input').value.trim();
+    var fields = searchFields();
+    $('search-results').replaceChildren();
+    if (!fields.length) { msg('search-msg', '探す項目を1つ以上チェックしてください。', 'err'); return; }
     if (!keyword) { msg('search-msg', 'キーワードを入れてください。', 'err'); return; }
     msg('search-msg', '');
-    $('search-results').replaceChildren();
     busy('探しています…');
-    api('search', { keyword: keyword, field: searchField() }).then(function (res) {
+    api('search', { keyword: keyword, fields: fields }).then(function (res) {
       idle();
       if (!res.ok) { msg('search-msg', res.message, 'err'); return; }
       if (!res.total) { msg('search-msg', '「' + keyword + '」に合う名刺は見つかりませんでした。'); return; }

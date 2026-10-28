@@ -49,6 +49,8 @@ body {
 main { max-width: 640px; margin: 0 auto; padding: 16px; }
 h2 { font-size: 20px; margin: 4px 0 12px; }
 .hint { color: var(--sub); font-size: 14px; margin: 0 0 12px; }
+#search-hint { white-space: pre-line; }
+p.field { margin: 0 0 6px; }
 
 button {
   font: inherit; color: inherit; cursor: pointer;

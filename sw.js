@@ -2,7 +2,7 @@
 // 画面のファイル（HTML・JS・CSS・アイコン）だけを置いておき、電波が弱くてもアプリが開くようにする。
 // 名刺のデータ（GASとのやり取り）は別のサイトあてなので、ここでは扱わない・保存しない。
 // 画面を更新したら VERSION を上げる。
-const VERSION = 'meishi-v4';
+const VERSION = 'meishi-v5';
 const SHELL = [
   './',
   './index.html',
