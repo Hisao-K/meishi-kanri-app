@@ -20,6 +20,7 @@
     shootFor: null,    // 'front' | 'back' | 'addBack' | { batch: 番号（-1＝新しい名刺）, side: 'front'|'back' }
     card: null,        // 詳細で開いている名刺
     tokenWaiters: [],
+    session: 0,        // ログアウト・ログイン切れのたびに増やす。前の回の応答は画面に出さない
   };
 
   // =========================
@@ -99,10 +100,36 @@
     return GAS_URL_RE.test(u);
   }
 
+  /** 接続先の URL の見分けやすい部分（/s/ の後ろの末尾8文字） */
+  function apiLabel(u) {
+    var m = String(u || '').match(/\/s\/([A-Za-z0-9_-]+)\//);
+    return m ? '…' + m[1].slice(-8) : u;
+  }
+
+  /**
+   * 接続先（この会社の GAS）を決める。リンクの ?api= は、確認して OK のときだけ使う
+   * （まだ設定がないときも、すでに別の接続先が設定されているときも）。
+   * （知らない人から届いたリンクで接続先を書き換えられ、ログインの情報をその人の GAS に送ってしまうのを防ぐ）
+   */
   function loadApiUrl() {
-    var fromLink = new URLSearchParams(location.search).get('api');
-    if (fromLink && validApiUrl(fromLink)) storageSet(API_URL_STORE, fromLink);
+    var params = new URLSearchParams(location.search);
+    var fromLink = params.get('api');
     var saved = storageGet(API_URL_STORE);
+    if (fromLink && validApiUrl(fromLink) && fromLink !== saved) {
+      var question = validApiUrl(saved)
+        ? '接続先（会社の名刺管理君）を切り替えますか？\n\n今の接続先: ' + apiLabel(saved) + '\n新しい接続先: ' + apiLabel(fromLink)
+        : 'このリンクの接続先（会社の名刺管理君）を使いますか？\n\n接続先: ' + apiLabel(fromLink);
+      if (confirm(question + '\n\n会社の導入担当から受け取ったリンクのときだけ「OK」を押してください。心当たりがなければ「キャンセル」を押してください。')) {
+        storageSet(API_URL_STORE, fromLink);
+        sessionSet(TOKEN_KEY, '');
+        saved = fromLink;
+      }
+    }
+    // 読み終えた ?api= はアドレスから消す（再読み込みで何度も確認が出ないように）
+    if (fromLink) {
+      params.delete('api');
+      try { history.replaceState(null, '', location.pathname + (params.toString() ? '?' + params : '') + location.hash); } catch (e) { /* 消せなくても動かす */ }
+    }
     state.apiUrl = validApiUrl(saved) ? saved : '';
   }
 
@@ -112,6 +139,7 @@
       msg('setup-msg', '設定コードの形が違います。https://script.google.com/macros/s/…/exec の形のURLを貼り付けてください。', 'err');
       return;
     }
+    if (u !== storageGet(API_URL_STORE)) sessionSet(TOKEN_KEY, '');
     storageSet(API_URL_STORE, u);
     state.apiUrl = u;
     start();
@@ -130,9 +158,27 @@
     } catch (e) { return null; }
   }
 
+  /** 接続先の URL の ID（/s/ と /exec の間）。手元の模擬環境は 'local' */
+  function apiId(u) {
+    var m = String(u || '').match(/\/s\/([A-Za-z0-9_-]+)\//);
+    return m ? m[1] : (IS_LOCAL ? 'local' : '');
+  }
+
+  /**
+   * ログインのトークンに入れる nonce。先頭を今の接続先の ID にする（GAS の Auth.verify が確かめる）。
+   * 偽の接続先に送らされたトークンは、本物の名刺管理君では通らない
+   */
+  function loginNonce() {
+    var bytes = new Uint8Array(16);
+    crypto.getRandomValues(bytes);
+    return apiId(state.apiUrl) + '.' + Array.prototype.map.call(bytes, function (b) { return ('0' + b.toString(16)).slice(-2); }).join('');
+  }
+
+  /** 期限まで1分以上あり、今の接続先あてのトークンか */
   function tokenValid(token) {
     var p = token && decodeJwt(token);
-    return !!(p && p.exp * 1000 - Date.now() > 60 * 1000);
+    return !!(p && p.exp * 1000 - Date.now() > 60 * 1000 &&
+              String(p.nonce || '').split('.')[0] === apiId(state.apiUrl));
   }
 
   function setToken(token) {
@@ -144,6 +190,11 @@
   }
 
   function onCredential(res) {
+    // 前の接続先で初期化したときのログインが遅れて届いたら使わない（今の接続先あてのトークンだけ使う）
+    if (!(IS_LOCAL && CONFIG.devIdToken) && !tokenValid(res.credential)) {
+      msg('login-msg', 'ログインをやり直してください（接続先が変わったため）。', 'err');
+      return;
+    }
     setToken(res.credential);
     var waiters = state.tokenWaiters.splice(0);
     waiters.forEach(function (w) { w(state.idToken); });
@@ -159,6 +210,7 @@
     if (!(window.google && google.accounts && google.accounts.id)) return false;
     google.accounts.id.initialize({
       client_id: CONFIG.googleClientId,
+      nonce: loginNonce(),
       callback: onCredential,
       auto_select: true,
       itp_support: true,
@@ -178,9 +230,8 @@
       try { google.accounts.id.prompt(); } catch (e) { /* 下のタイマーでログイン画面へ */ }
       setTimeout(function () {
         if (done) return;
-        idle();
-        show('login');
-        msg('login-msg', 'ログインの有効期限が切れました。もう一度ログインしてください。', 'err');
+        state.tokenWaiters.splice(0);
+        endSession('ログインの有効期限が切れました。もう一度ログインしてください。', 'err');
         reject(new Error('ログインが必要です'));
       }, 6000);
     });
@@ -192,19 +243,32 @@
    */
   function logout() {
     if (!state.idToken || !confirm('ログアウトして閉じますか？\n次に開いたときは、ログインからになります。')) return;
-    setToken('');
     try { google.accounts.id.disableAutoSelect(); } catch (e) { /* 未読み込みでも続ける */ }
+    endSession('ログアウトしました。アプリを閉じるときは、スマホの操作で閉じてください。', 'ok');
+  }
+
+  /**
+   * ログインを終える（ログアウト・ログイン切れの両方）。トークンを消し、画面に出ている名刺・写真・入力中の文字を消し、
+   * 録音を止める。session を増やすので、終える前に送った要求の応答は画面に出ない。
+   */
+  function endSession(text, kind) {
+    state.session++;
+    setToken('');
+    stopRecording();
+    try { google.accounts.id.cancel(); } catch (e) { /* ログインの案内が出ていなければ何もしない */ }
+    idle();
     resetShots();
     state.batch = [];
     renderBatch();
     state.card = null;
-    ['search-input', 'ask-input', 'batch-comment', 'comment-input'].forEach(function (id) { $(id).value = ''; });
+    ['search-input', 'ask-input', 'batch-comment', 'comment-input', 'file-card', 'file-face'].forEach(function (id) { $(id).value = ''; });
+    $('ask-answer').textContent = '';
     ['register-result', 'batch-results', 'search-results', 'ask-results', 'detail-body', 'detail-images'].forEach(function (id) { $(id).replaceChildren(); });
     ['register-msg', 'batch-msg', 'search-msg', 'ask-msg', 'detail-msg'].forEach(function (id) { msg(id, ''); });
     $('ask-answer').hidden = true;
     selectTab('register');
     show('login');
-    msg('login-msg', 'ログアウトしました。アプリを閉じるときは、スマホの操作で閉じてください。', 'ok');
+    msg('login-msg', text, kind);
   }
 
   $('who').addEventListener('click', logout);
@@ -217,7 +281,10 @@
    * @returns {Promise<Object>} GAS の応答（ok:false でも返す。呼び出し元が message を出す）
    */
   function api(action, params) {
+    var session = state.session;
+    var never = function () { return new Promise(function () {}); };   // 終えたログインの応答は捨てる
     return freshToken().then(function (idToken) {
+      if (session !== state.session) return never();
       var body = Object.assign({ action: action, idToken: idToken }, params || {});
       return fetch(state.apiUrl, {
         method: 'POST',
@@ -232,13 +299,19 @@
           throw new Error('応答を読めませんでした。\n[原因] HTTP ' + res.status);
         });
       }).then(function (json) {
+        if (session !== state.session) return never();
         if (!json.ok && json.code === 'AUTH') {
-          setToken('');
-          show('login');
-          msg('login-msg', json.message, 'err');
+          endSession(json.message, 'err');
+          return never();
         }
         return json;
+      }, function (e) {
+        if (session !== state.session) return never();   // 通信の失敗も、終えたログインの分は画面に出さない
+        throw e;
       });
+    }, function (e) {
+      if (session !== state.session) return never();   // ログイン切れで終えた。ログイン画面に案内済み
+      throw e;
     });
   }
 
@@ -346,7 +419,9 @@
     var file = this.files && this.files[0];
     if (!file) return;
     var target = state.shootFor;
+    var session = state.session;
     resizeImage(file, 1600).then(function (img) {
+      if (session !== state.session) return;   // 縮めている間にログアウトした
       if (target === 'addBack') return addBack(img.base64);
       if (typeof target === 'object') return putBatchShot(target, img);
       state.shots[target] = img.base64;
@@ -355,6 +430,7 @@
       prev.hidden = false;
       refreshRegister();
     }).catch(function (e) {
+      if (session !== state.session) return;
       msg(target === 'addBack' ? 'detail-msg' : typeof target === 'object' ? 'batch-msg' : 'register-msg', errText(e), 'err');
     });
   });
@@ -527,6 +603,7 @@
             btn.disabled = true;
             btn.textContent = r.ok ? '裏面を追加しました' : '追加できませんでした';
             if (!r.ok) msg('batch-msg', r.message, 'err');
+            else if ((r.notes || []).length) msg('batch-msg', no + '枚目：' + r.notes.join('\n'), 'err');
           }).catch(function (e) { idle(); msg('batch-msg', errText(e), 'err'); });
         } });
         actions.push(btn);
@@ -583,8 +660,9 @@
     api('search', { keyword: keyword, fields: fields }).then(function (res) {
       idle();
       if (!res.ok) { msg('search-msg', res.message, 'err'); return; }
-      if (!res.total) { msg('search-msg', '「' + keyword + '」に合う名刺は見つかりませんでした。'); return; }
-      msg('search-msg', res.total + '件' + (res.total > res.results.length ? '（上位' + res.results.length + '件を表示）' : ''));
+      var notes = res.notes || [];
+      if (!res.total) { msg('search-msg', ['「' + keyword + '」に合う名刺は見つかりませんでした。'].concat(notes).join('\n')); return; }
+      msg('search-msg', [res.total + '件' + (res.total > res.results.length ? '（上位' + res.results.length + '件を表示）' : '')].concat(notes).join('\n'));
       $('search-results').replaceChildren.apply($('search-results'), res.results.map(function (r) {
         return listItem(r, function () { openDetail(r.row); });
       }));
@@ -605,6 +683,7 @@
     api('ask', { question: question }).then(function (res) {
       idle();
       if (!res.ok) { msg('ask-msg', res.message, 'err'); return; }
+      msg('ask-msg', (res.notes || []).join('\n'));
       $('ask-answer').textContent = res.answer || '';
       $('ask-answer').hidden = !res.answer;
       $('ask-results').replaceChildren.apply($('ask-results'), res.candidates.map(function (c) {
@@ -617,6 +696,19 @@
   //  声で入力
   // =========================
   var recorder = null;
+
+  /** 録音中なら、文字起こしに送らずに止める（ログアウトのとき） */
+  function stopRecording() {
+    if (!recorder) return;
+    var r = recorder;
+    recorder = null;
+    r.ondataavailable = null;
+    r.onstop = null;
+    clearTimeout(r.meishiTimer);
+    try { r.stop(); } catch (e) { /* 止まっていても続ける */ }
+    try { r.stream.getTracks().forEach(function (t) { t.stop(); }); } catch (e) { /* 同上 */ }
+    document.querySelectorAll('.mic').forEach(function (b) { b.classList.remove('rec'); });
+  }
 
   function pickAudioType() {
     var types = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg'];
@@ -645,33 +737,48 @@
         msg(msgId, 'この端末のブラウザは録音に対応していません。キーボードのマイクで入力してください。', 'err');
         return;
       }
+      var session = state.session;
       navigator.mediaDevices.getUserMedia({ audio: true }).then(function (stream) {
+        if (session !== state.session || recorder) {   // 許可を待つ間にログアウトした・もう録音中
+          stream.getTracks().forEach(function (t) { t.stop(); });
+          return;
+        }
         var type = pickAudioType();
         var chunks = [];
-        recorder = new MediaRecorder(stream, type ? { mimeType: type } : undefined);
-        var timer = setTimeout(function () { if (recorder) recorder.stop(); }, MAX_RECORD_MS);
-        recorder.ondataavailable = function (e) { if (e.data.size) chunks.push(e.data); };
-        recorder.onstop = function () {
-          clearTimeout(timer);
+        var mine = new MediaRecorder(stream, type ? { mimeType: type } : undefined);
+        recorder = mine;
+        // 30秒で止める。止めるのは自分の録音だけ（ログアウト後に始めた別の録音は止めない）
+        mine.meishiTimer = setTimeout(function () { if (recorder === mine) mine.stop(); }, MAX_RECORD_MS);
+        mine.ondataavailable = function (e) { if (e.data.size) chunks.push(e.data); };
+        mine.onstop = function () {
+          clearTimeout(mine.meishiTimer);
           stream.getTracks().forEach(function (t) { t.stop(); });
-          var mime = recorder.mimeType || type;
-          recorder = null;
+          var mime = mine.mimeType || type;
+          if (recorder === mine) recorder = null;
           b.classList.remove('rec');
+          if (session !== state.session) return;   // 録音を始めたあとにログアウトした
           var blob = new Blob(chunks, { type: mime });
           if (!blob.size) { msg(msgId, '録音できませんでした。もう一度お試しください。', 'err'); return; }
           busy('声を文字にしています…');
+          var never = function () { return new Promise(function () {}); };
           blobToBase64(blob).then(function (b64) {
+            // 音声を読み終える前にログアウト・別の人がログインしていたら送らない（前の人の声を、次の人のログインで送らない）
+            if (session !== state.session) return never();
             return api('transcribe', { audio: b64, mimeType: geminiAudioType(mime) });
           }).then(function (res) {
+            if (session !== state.session) return;
             idle();
             if (!res.ok) { msg(msgId, res.message, 'err'); return; }
             if (!res.text) { msg(msgId, '聞き取れませんでした。もう一度話してください。', 'err'); return; }
             target.value = res.text;
             msg(msgId, '');
             if (!b.dataset.noauto) $(b.dataset.target === 'search-input' ? 'do-search' : 'do-ask').click();
-          }).catch(function (e) { idle(); msg(msgId, errText(e), 'err'); });
+          }).catch(function (e) {
+            if (session !== state.session) return;
+            idle(); msg(msgId, errText(e), 'err');
+          });
         };
-        recorder.start();
+        mine.start();
         b.classList.add('rec');
         msg(msgId, '話してください。終わったらもう一度🎤を押します（30秒で止まります）。');
       }).catch(function (e) {
@@ -764,7 +871,10 @@
   $('file-face').addEventListener('change', function () {
     var file = this.files && this.files[0];
     if (!file) return;
+    var session = state.session;
+    var never = function () { return new Promise(function () {}); };
     resizeImage(file, 800).then(function (img) {
+      if (session !== state.session || !state.card) return never();   // 縮めている間にログアウトした
       busy('顔写真を保存しています…');
       return api('addPhoto', Object.assign({ image: img.base64 }, target()));
     }).then(function (res) {
