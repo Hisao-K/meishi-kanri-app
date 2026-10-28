@@ -140,6 +140,7 @@
     sessionSet(TOKEN_KEY, state.idToken);
     var p = token && decodeJwt(token);
     $('who').textContent = p ? p.email : '';
+    $('logout').hidden = !state.idToken;
   }
 
   function onCredential(res) {
@@ -185,12 +186,29 @@
     });
   }
 
-  $('who').addEventListener('click', function () {
-    if (!state.idToken || !confirm('ログアウトしますか？')) return;
+  /**
+   * 「閉じる」＝ログアウト。ホーム画面のアプリは自分では閉じられないため、
+   * ログインを解除し、画面に出ている名刺・写真・入力中の文字も消してログイン画面に戻す。
+   */
+  function logout() {
+    if (!state.idToken || !confirm('ログアウトして閉じますか？\n次に開いたときは、ログインからになります。')) return;
     setToken('');
     try { google.accounts.id.disableAutoSelect(); } catch (e) { /* 未読み込みでも続ける */ }
+    resetShots();
+    state.batch = [];
+    renderBatch();
+    state.card = null;
+    ['search-input', 'ask-input', 'batch-comment', 'comment-input'].forEach(function (id) { $(id).value = ''; });
+    ['register-result', 'batch-results', 'search-results', 'ask-results', 'detail-body', 'detail-images'].forEach(function (id) { $(id).replaceChildren(); });
+    ['register-msg', 'batch-msg', 'search-msg', 'ask-msg', 'detail-msg'].forEach(function (id) { msg(id, ''); });
+    $('ask-answer').hidden = true;
+    selectTab('register');
     show('login');
-  });
+    msg('login-msg', 'ログアウトしました。アプリを閉じるときは、スマホの操作で閉じてください。', 'ok');
+  }
+
+  $('who').addEventListener('click', logout);
+  $('logout').addEventListener('click', logout);
 
   // =========================
   //  GAS とのやり取り

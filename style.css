@@ -40,7 +40,11 @@ body {
   background: var(--orange); color: #fff;
 }
 .bar h1 { font-size: 19px; margin: 0; letter-spacing: .02em; }
-.who { font-size: 12px; opacity: .9; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 55%; }
+.who { flex: 1; text-align: right; font-size: 12px; opacity: .9; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.bar .close {
+  flex: none; min-height: 36px; padding: 4px 14px; font-size: 15px; font-weight: 700;
+  background: #fff; border-color: #fff; color: var(--orange-dark);
+}
 
 main { max-width: 640px; margin: 0 auto; padding: 16px; }
 h2 { font-size: 20px; margin: 4px 0 12px; }
