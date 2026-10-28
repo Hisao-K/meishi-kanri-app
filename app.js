@@ -422,7 +422,6 @@
   }
 
   $('batch-add').addEventListener('click', function () { shootBatch(-1, 'front'); });
-  $('batch-back').addEventListener('click', function () { shootBatch(state.batch.length - 1, 'back'); });
 
   function putBatchShot(target, img) {
     var shot = { base64: img.base64, dataUrl: img.dataUrl };
@@ -434,14 +433,14 @@
   function renderBatch() {
     var list = $('batch-list');
     list.replaceChildren.apply(list, state.batch.map(function (c, i) {
-      // 写真を押すと撮り直し。裏が無い名刺は「裏なし」と出し、押すと裏を撮れる
+      // 写真を押すと撮り直し。裏がまだ無い名刺は、表の右に「📷 裏を撮る」を出す
       function slot(side, label) {
         var shot = c[side];
-        return el('button', { 'aria-label': (i + 1) + '枚目の' + label, onclick: function () { shootBatch(i, side); } },
-          [shot ? el('img', { src: shot.dataUrl, alt: label }) : el('span', { text: '裏なし' })]);
+        return el('button', { class: shot ? '' : 'take', 'aria-label': (i + 1) + '枚目の' + label, onclick: function () { shootBatch(i, side); } },
+          [shot ? el('img', { src: shot.dataUrl, alt: label }) : el('span', { text: '📷 裏を撮る' })]);
       }
       return el('li', {}, [
-        el('div', { class: 'no', text: (i + 1) + '枚目（左が表・右が裏。押すと撮り直し）' }),
+        el('div', { class: 'no', text: (i + 1) + '枚目（左が表・右が裏。写真を押すと撮り直し）' }),
         el('div', { class: 'pair' }, [
           slot('front', '表'),
           slot('back', '裏'),
@@ -452,11 +451,8 @@
         ]),
       ]);
     }));
-    // 次に押すボタンだけを大きく出す。直前の名刺に裏が無ければ「裏を撮る」も出す
+    // 一覧のすぐ下に「次の名刺の表を撮る」を出す
     var n = state.batch.length;
-    var last = state.batch[n - 1];
-    $('batch-back').hidden = !last || !!last.back;
-    $('batch-back').textContent = '📷 ' + n + '枚目の裏を撮る';
     $('batch-add').textContent = n ? '📷 次の名刺（' + (n + 1) + '枚目）の表を撮る' : '📷 1枚目の表を撮る';
     $('batch-list').hidden = !n;
     refreshRegister();
