@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>名刺管理君</title>
+  <meta name="theme-color" content="#E7741D">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="名刺管理君">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="referrer" content="no-referrer">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="style.css">
+  <script src="config.js"></script>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+  <header class="bar">
+    <h1>名刺管理君</h1>
+    <span id="who" class="who"></span>
+  </header>
+
+  <main>
+    <!-- 設定：この会社のGASのURLがまだない -->
+    <section id="view-setup" class="view" hidden>
+      <h2>はじめの設定</h2>
+      <p>導入のときにお渡しした「設定用リンク」を開いてください。リンクが開けないときは、お渡しした設定コード（https://script.google.com/… で始まるURL）を貼り付けてください。</p>
+      <label class="field">設定コード
+        <input id="setup-url" type="url" inputmode="url" placeholder="https://script.google.com/macros/s/…/exec" autocomplete="off">
+      </label>
+      <button id="setup-save" class="primary">保存する</button>
+      <p id="setup-msg" class="msg"></p>
+    </section>
+
+    <!-- ログイン -->
+    <section id="view-login" class="view" hidden>
+      <h2>ログイン</h2>
+      <p>会社の Google アカウントでログインしてください。名刺は同じ会社の社員だけが見られます。</p>
+      <div id="gsi-button"></div>
+      <p id="login-msg" class="msg"></p>
+    </section>
+
+    <!-- メイン -->
+    <section id="view-main" class="view" hidden>
+      <nav class="tabs" role="tablist">
+        <button role="tab" data-tab="register" aria-selected="true">📷 登録</button>
+        <button role="tab" data-tab="search" aria-selected="false">🔍 探す</button>
+        <button role="tab" data-tab="ask" aria-selected="false">💬 AIに相談</button>
+      </nav>
+
+      <!-- 登録 -->
+      <div id="tab-register" class="tab">
+        <div class="seg" role="radiogroup" aria-label="撮る面">
+          <label><input type="radio" name="mode" value="front" checked> 片面</label>
+          <label><input type="radio" name="mode" value="both"> 両面</label>
+          <label><input type="radio" name="mode" value="batch"> まとめて</label>
+        </div>
+
+        <!-- まとめて登録：何枚でも。1枚ごとに表（必須）と裏（あれば） -->
+        <div id="batch-area" hidden>
+          <p class="hint">名刺を1枚ずつ撮って並べ、最後にまとめて登録します。裏面は、ある名刺だけ撮ってください。</p>
+          <ol id="batch-list" class="batch"></ol>
+          <button id="batch-add" class="shoot">＋ 次の名刺（表面）を撮る</button>
+          <label class="field" for="batch-comment">全部の名刺に付けるコメント（任意）</label>
+          <div class="row">
+            <textarea id="batch-comment" rows="2" placeholder="例：守成クラブ新緑会で名刺交換"></textarea>
+            <button class="mic" data-target="batch-comment" data-noauto="1" aria-label="声で入力">🎤</button>
+          </div>
+          <button id="do-batch" class="primary" disabled>まとめて登録する</button>
+          <p id="batch-msg" class="msg"></p>
+          <ul id="batch-results" class="list"></ul>
+        </div>
+
+        <div class="shots" id="single-area">
+          <div class="shot">
+            <button class="shoot" data-side="front">表面を撮る</button>
+            <img id="prev-front" class="preview" alt="表面" hidden>
+          </div>
+          <div class="shot" id="shot-back" hidden>
+            <button class="shoot" data-side="back">裏面を撮る</button>
+            <img id="prev-back" class="preview" alt="裏面" hidden>
+          </div>
+        </div>
+        <div id="single-actions">
+          <button id="do-register" class="primary" disabled>登録する</button>
+          <p id="register-msg" class="msg"></p>
+          <div id="register-result"></div>
+        </div>
+      </div>
+
+      <!-- 探す -->
+      <div id="tab-search" class="tab" hidden>
+        <p class="hint">名前・会社名・仕事内容などで探します。「ニッサン」でも「日産」が見つかります。</p>
+        <div class="row">
+          <input id="search-input" type="search" placeholder="例：ニッサン　田中" enterkeyhint="search">
+          <button class="mic" data-target="search-input" aria-label="声で入力">🎤</button>
+        </div>
+        <button id="do-search" class="primary">探す</button>
+        <p id="search-msg" class="msg"></p>
+        <ul id="search-results" class="list"></ul>
+      </div>
+
+      <!-- AIに相談 -->
+      <div id="tab-ask" class="tab" hidden>
+        <p class="hint">やりたいことを文章で書くと、登録した名刺の中から合う会社・人を選びます。判断の材料は名刺とコメントに書いてあることだけです。</p>
+        <div class="row">
+          <textarea id="ask-input" rows="3" placeholder="例：DXを進めたい。DXの要件を相談できる会社を選んで"></textarea>
+          <button class="mic" data-target="ask-input" aria-label="声で入力">🎤</button>
+        </div>
+        <button id="do-ask" class="primary">相談する</button>
+        <p id="ask-msg" class="msg"></p>
+        <p id="ask-answer" class="answer" hidden></p>
+        <ul id="ask-results" class="list"></ul>
+      </div>
+    </section>
+
+    <!-- 名刺の詳細 -->
+    <section id="view-detail" class="view" hidden>
+      <button id="detail-back" class="link">← 戻る</button>
+      <div id="detail-body"></div>
+      <div class="actions">
+        <button id="act-back">📷 裏面を追加</button>
+        <button id="act-face">👤 顔写真を追加</button>
+        <button id="act-comment">💬 コメントを追加</button>
+      </div>
+      <div id="comment-box" hidden>
+        <div class="row">
+          <textarea id="comment-input" rows="3" placeholder="会ったときの様子、次の約束など"></textarea>
+          <button class="mic" data-target="comment-input" data-noauto="1" aria-label="声で入力">🎤</button>
+        </div>
+        <button id="comment-save" class="primary">コメントを保存</button>
+      </div>
+      <p id="detail-msg" class="msg"></p>
+      <div id="detail-images" class="images"></div>
+    </section>
+  </main>
+
+  <!-- 撮影用（画面には出さない） -->
+  <input id="file-card" type="file" accept="image/*" capture="environment" hidden>
+  <input id="file-face" type="file" accept="image/*" capture="user" hidden>
+
+  <div id="busy" class="busy" hidden><div class="spinner"></div><p id="busy-text">処理しています…</p></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
