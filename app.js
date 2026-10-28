@@ -316,7 +316,7 @@
 
   document.querySelectorAll('input[name="mode"]').forEach(function (r) { r.addEventListener('change', refreshRegister); });
 
-  document.querySelectorAll('.shoot').forEach(function (b) {
+  document.querySelectorAll('.shoot[data-side]').forEach(function (b) {
     b.addEventListener('click', function () {
       state.shootFor = b.dataset.side;
       $('file-card').value = '';
@@ -404,6 +404,7 @@
   }
 
   $('batch-add').addEventListener('click', function () { shootBatch(-1, 'front'); });
+  $('batch-back').addEventListener('click', function () { shootBatch(state.batch.length - 1, 'back'); });
 
   function putBatchShot(target, img) {
     var shot = { base64: img.base64, dataUrl: img.dataUrl };
@@ -415,21 +416,31 @@
   function renderBatch() {
     var list = $('batch-list');
     list.replaceChildren.apply(list, state.batch.map(function (c, i) {
+      // 写真を押すと撮り直し。裏が無い名刺は「裏なし」と出し、押すと裏を撮れる
       function slot(side, label) {
         var shot = c[side];
-        return el('button', { 'aria-label': '名刺' + (i + 1) + 'の' + label, onclick: function () { shootBatch(i, side); } },
-          [shot ? el('img', { src: shot.dataUrl, alt: label }) : el('span', { text: label + 'を撮る' })]);
+        return el('button', { 'aria-label': (i + 1) + '枚目の' + label, onclick: function () { shootBatch(i, side); } },
+          [shot ? el('img', { src: shot.dataUrl, alt: label }) : el('span', { text: '裏なし' })]);
       }
-      return el('li', {}, [el('div', { class: 'pair' }, [
-        slot('front', '表面'),
-        slot('back', '裏面'),
-        el('button', { class: 'del', text: '外す', 'aria-label': '名刺' + (i + 1) + 'を外す', onclick: function () {
-          state.batch.splice(i, 1);
-          renderBatch();
-        } }),
-      ])]);
+      return el('li', {}, [
+        el('div', { class: 'no', text: (i + 1) + '枚目（左が表・右が裏。押すと撮り直し）' }),
+        el('div', { class: 'pair' }, [
+          slot('front', '表'),
+          slot('back', '裏'),
+          el('button', { class: 'del', text: '外す', 'aria-label': (i + 1) + '枚目を外す', onclick: function () {
+            state.batch.splice(i, 1);
+            renderBatch();
+          } }),
+        ]),
+      ]);
     }));
-    $('batch-add').textContent = state.batch.length ? '＋ 次の名刺（表面）を撮る' : '＋ 1枚目の名刺（表面）を撮る';
+    // 次に押すボタンだけを大きく出す。直前の名刺に裏が無ければ「裏を撮る」も出す
+    var n = state.batch.length;
+    var last = state.batch[n - 1];
+    $('batch-back').hidden = !last || !!last.back;
+    $('batch-back').textContent = '📷 ' + n + '枚目の裏を撮る';
+    $('batch-add').textContent = n ? '📷 次の名刺（' + (n + 1) + '枚目）の表を撮る' : '📷 1枚目の表を撮る';
+    $('batch-list').hidden = !n;
     refreshRegister();
   }
 

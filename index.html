@@ -61,9 +61,10 @@
 
         <!-- まとめて登録：何枚でも。1枚ごとに表（必須）と裏（あれば） -->
         <div id="batch-area" hidden>
-          <p class="hint">名刺を1枚ずつ撮って並べ、最後にまとめて登録します。裏面は、ある名刺だけ撮ってください。</p>
+          <p class="hint">名刺を1枚ずつ撮ります。表を撮ったら、裏がある名刺は続けて裏を撮ってください。撮り終えたら下の「まとめて登録する」を押します。</p>
           <ol id="batch-list" class="batch"></ol>
-          <button id="batch-add" class="shoot">＋ 次の名刺（表面）を撮る</button>
+          <button id="batch-back" class="shoot" hidden>📷 裏を撮る</button>
+          <button id="batch-add" class="shoot">📷 1枚目の表を撮る</button>
           <label class="field" for="batch-comment">全部の名刺に付けるコメント（任意）</label>
           <div class="row">
             <textarea id="batch-comment" rows="2" placeholder="例：守成クラブ新緑会で名刺交換"></textarea>
