@@ -547,13 +547,35 @@
   // =========================
   //  探す
   // =========================
+  var SEARCH_FIELDS = {
+    name:    { hint: '名前で探します。姓だけでも探せます。姓と名の間の空白は、あってもなくてもかまいません。', placeholder: '例：田中' },
+    company: { hint: '会社名で探します。「ニッサン」でも「日産」が見つかります。', placeholder: '例：ニッサン' },
+    free:    { hint: '名前・会社名・仕事内容・裏面・コメントのどこかに入っている言葉で探します。', placeholder: '例：補助金' },
+  };
+
+  function searchField() { return document.querySelector('input[name="field"]:checked').value; }
+
+  function refreshSearch() {
+    var f = SEARCH_FIELDS[searchField()];
+    $('search-hint').textContent = f.hint;
+    $('search-input').placeholder = f.placeholder;
+  }
+
+  document.querySelectorAll('input[name="field"]').forEach(function (r) {
+    r.addEventListener('change', function () {
+      refreshSearch();
+      // 選び直したら、入っている言葉でそのまま探し直す
+      if ($('search-input').value.trim()) $('do-search').click();
+    });
+  });
+
   $('do-search').addEventListener('click', function () {
     var keyword = $('search-input').value.trim();
     if (!keyword) { msg('search-msg', 'キーワードを入れてください。', 'err'); return; }
     msg('search-msg', '');
     $('search-results').replaceChildren();
     busy('探しています…');
-    api('search', { keyword: keyword }).then(function (res) {
+    api('search', { keyword: keyword, field: searchField() }).then(function (res) {
       idle();
       if (!res.ok) { msg('search-msg', res.message, 'err'); return; }
       if (!res.total) { msg('search-msg', '「' + keyword + '」に合う名刺は見つかりませんでした。'); return; }
@@ -798,5 +820,6 @@
   }
 
   refreshRegister();
+  refreshSearch();
   start();
 })();

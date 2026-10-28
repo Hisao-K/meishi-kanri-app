@@ -95,9 +95,14 @@
 
       <!-- 探す -->
       <div id="tab-search" class="tab" hidden>
-        <p class="hint">名前・会社名・仕事内容などで探します。「ニッサン」でも「日産」が見つかります。</p>
+        <div class="seg" role="radiogroup" aria-label="探す対象">
+          <label><input type="radio" name="field" value="name" checked> 名前</label>
+          <label><input type="radio" name="field" value="company"> 会社</label>
+          <label><input type="radio" name="field" value="free"> フリー</label>
+        </div>
+        <p id="search-hint" class="hint"></p>
         <div class="row">
-          <input id="search-input" type="search" placeholder="例：ニッサン　田中" enterkeyhint="search">
+          <input id="search-input" type="search" enterkeyhint="search">
           <button class="mic" data-target="search-input" aria-label="声で入力">🎤</button>
         </div>
         <button id="do-search" class="primary">探す</button>
