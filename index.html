@@ -112,14 +112,22 @@
 
       <!-- AIに相談 -->
       <div id="tab-ask" class="tab" hidden>
-        <p class="hint">やりたいことを文章で書くと、登録した名刺の中から合う会社・人を選びます。判断の材料は名刺とコメントに書いてあることだけです。</p>
+        <p class="hint">やりたいことを文章で書くと、AIが探す言葉を出し、検索辞書の同じ意味の言葉と合わせて名刺を探します。言葉のチェックを外すと、その言葉に当たった名刺を一覧から外します。</p>
         <div class="row">
-          <textarea id="ask-input" rows="3" placeholder="例：DXを進めたい。DXの要件を相談できる会社を選んで"></textarea>
+          <textarea id="ask-input" rows="3" placeholder="例：店舗をリフォームしたい。補助金にくわしい人も"></textarea>
           <button class="mic" data-target="ask-input" aria-label="声で入力">🎤</button>
         </div>
         <button id="do-ask" class="primary">相談する</button>
         <p id="ask-msg" class="msg"></p>
-        <p id="ask-answer" class="answer" hidden></p>
+        <div id="ask-words" class="ask-words" hidden>
+          <p class="field">探した言葉（チェックを外すと、その言葉に当たった名刺を一覧から外します。数字は当たった名刺の数）</p>
+          <div id="ask-groups"></div>
+          <div class="row">
+            <input id="ask-add-input" type="text" maxlength="20" placeholder="言葉を足す（例：内装）" enterkeyhint="done">
+            <button id="do-ask-add">足す</button>
+          </div>
+        </div>
+        <p id="ask-count" class="msg"></p>
         <ul id="ask-results" class="list"></ul>
       </div>
     </section>

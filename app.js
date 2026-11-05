@@ -262,10 +262,10 @@
     renderBatch();
     state.card = null;
     ['search-input', 'ask-input', 'batch-comment', 'comment-input', 'file-card', 'file-face'].forEach(function (id) { $(id).value = ''; });
-    $('ask-answer').textContent = '';
     ['register-result', 'batch-results', 'search-results', 'ask-results', 'detail-body', 'detail-images'].forEach(function (id) { $(id).replaceChildren(); });
     ['register-msg', 'batch-msg', 'search-msg', 'ask-msg', 'detail-msg'].forEach(function (id) { msg(id, ''); });
-    $('ask-answer').hidden = true;
+    askReset();
+    $('ask-add-input').value = '';
     selectTab('register');
     show('login');
     msg('login-msg', text, kind);
@@ -673,24 +673,106 @@
   // =========================
   //  AIに相談
   // =========================
+  // 相談の結果（画面の中だけで持つ）。groups＝探した言葉のまとまり、hits＝言葉→当たった名刺の行、cards＝行→名刺、off＝チェックを外した言葉
+  var ask = { groups: [], hits: {}, cards: {}, off: {} };
+
+  function askReset() {
+    ask = { groups: [], hits: {}, cards: {}, off: {} };
+    $('ask-groups').replaceChildren();
+    $('ask-results').replaceChildren();
+    $('ask-words').hidden = true;
+    msg('ask-count', '');
+  }
+
+  /** GAS の答えを今の結果に足す（すでにある言葉は足さない） */
+  function askMerge(res) {
+    var have = {};
+    ask.groups.forEach(function (g) { g.variants.forEach(function (v) { have[v.toLowerCase()] = true; }); });
+    (res.groups || []).forEach(function (g) {
+      var vs = g.variants.filter(function (v) { var k = v.toLowerCase(); if (have[k]) return false; have[k] = true; return true; });
+      if (vs.length) ask.groups.push({ word: g.word, variants: vs, source: g.source });
+    });
+    Object.keys(res.hits || {}).forEach(function (v) { if (!ask.hits[v]) ask.hits[v] = res.hits[v]; });
+    (res.cards || []).forEach(function (c) { ask.cards[c.row] = c; });
+  }
+
+  function askRender() {
+    $('ask-groups').replaceChildren.apply($('ask-groups'), ask.groups.map(function (g) {
+      return el('div', { class: 'ask-group' }, [
+        el('div', { class: 'head', text: g.word }, [g.source === 'AI' ? el('span', { class: 'src', text: '（同じ意味の言葉をAIが辞書に登録）' }) : null]),
+        el('div', { class: 'chips' }, g.variants.map(function (v) {
+          var box = el('input', { type: 'checkbox', 'aria-label': v });
+          box.checked = !ask.off[v];
+          var label = el('label', { class: 'chip' + (ask.off[v] ? ' off' : '') }, [box, el('span', { text: v }), el('span', { class: 'n', text: String((ask.hits[v] || []).length) })]);
+          box.addEventListener('change', function () {
+            if (box.checked) delete ask.off[v]; else ask.off[v] = true;
+            label.className = 'chip' + (box.checked ? '' : ' off');
+            askList();
+          });
+          return label;
+        })),
+      ]);
+    }));
+    $('ask-words').hidden = !ask.groups.length;
+    askList();
+  }
+
+  /**
+   * 名刺の一覧。チェックの付いた言葉のどれかに当たった名刺を出し、チェックを外した言葉に当たった名刺は外す（2026-11-05 久夫さん指示）。
+   * 当たった言葉の多い順、同じなら新しい名刺から。
+   */
+  function askList() {
+    var excluded = {}, matched = {};
+    ask.groups.forEach(function (g) {
+      g.variants.forEach(function (v) {
+        if (ask.off[v]) (ask.hits[v] || []).forEach(function (r) { excluded[r] = true; });
+      });
+    });
+    ask.groups.forEach(function (g) {
+      g.variants.forEach(function (v) {
+        if (ask.off[v]) return;
+        (ask.hits[v] || []).forEach(function (r) { if (!excluded[r] && ask.cards[r]) (matched[r] = matched[r] || []).push(v); });
+      });
+    });
+    var rows = Object.keys(matched).map(Number).sort(function (a, b) { return matched[b].length - matched[a].length || b - a; });
+    if (!ask.groups.length) msg('ask-count', '');
+    else msg('ask-count', rows.length ? '対象の名刺 ' + rows.length + '件' : '当たる名刺はありません。');
+    $('ask-results').replaceChildren.apply($('ask-results'), rows.map(function (r) {
+      return listItem(ask.cards[r], function () { openDetail(r); }, '一致：' + matched[r].join('、'));
+    }));
+  }
+
   $('do-ask').addEventListener('click', function () {
     var question = $('ask-input').value.trim();
     if (!question) { msg('ask-msg', '相談したいことを書いてください。', 'err'); return; }
     msg('ask-msg', '');
-    $('ask-answer').hidden = true;
-    $('ask-results').replaceChildren();
-    busy('名刺の中から選んでいます…');
-    api('ask', { question: question }).then(function (res) {
+    askReset();
+    busy('探す言葉を考えています…');
+    api('askKeywords', { question: question }).then(function (res) {
       idle();
       if (!res.ok) { msg('ask-msg', res.message, 'err'); return; }
       msg('ask-msg', (res.notes || []).join('\n'));
-      $('ask-answer').textContent = res.answer || '';
-      $('ask-answer').hidden = !res.answer;
-      $('ask-results').replaceChildren.apply($('ask-results'), res.candidates.map(function (c) {
-        return listItem(c, function () { openDetail(c.row); }, c.reason);
-      }));
+      askMerge(res);
+      askRender();
     }).catch(function (e) { idle(); msg('ask-msg', errText(e), 'err'); });
   });
+
+  $('do-ask-add').addEventListener('click', function () {
+    var word = $('ask-add-input').value.trim();
+    if (!word) { msg('ask-msg', '足す言葉を入れてください。', 'err'); return; }
+    msg('ask-msg', '');
+    busy('「' + word + '」で探しています…');
+    api('askWords', { words: [word] }).then(function (res) {
+      idle();
+      if (!res.ok) { msg('ask-msg', res.message, 'err'); return; }
+      var before = ask.groups.length;
+      askMerge(res);
+      $('ask-add-input').value = '';
+      msg('ask-msg', (res.notes || []).concat(ask.groups.length === before ? ['「' + word + '」はすでに探した言葉に入っています。'] : []).join('\n'));
+      askRender();
+    }).catch(function (e) { idle(); msg('ask-msg', errText(e), 'err'); });
+  });
+  $('ask-add-input').addEventListener('keydown', function (e) { if (e.key === 'Enter') $('do-ask-add').click(); });
 
   // =========================
   //  声で入力
