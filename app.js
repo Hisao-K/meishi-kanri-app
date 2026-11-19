@@ -117,8 +117,8 @@
     var saved = storageGet(API_URL_STORE);
     if (fromLink && validApiUrl(fromLink) && fromLink !== saved) {
       var question = validApiUrl(saved)
-        ? '接続先（会社の名刺管理君）を切り替えますか？\n\n今の接続先: ' + apiLabel(saved) + '\n新しい接続先: ' + apiLabel(fromLink)
-        : 'このリンクの接続先（会社の名刺管理君）を使いますか？\n\n接続先: ' + apiLabel(fromLink);
+        ? '接続先（会社の名刺の達人）を切り替えますか？\n\n今の接続先: ' + apiLabel(saved) + '\n新しい接続先: ' + apiLabel(fromLink)
+        : 'このリンクの接続先（会社の名刺の達人）を使いますか？\n\n接続先: ' + apiLabel(fromLink);
       if (confirm(question + '\n\n会社の導入担当から受け取ったリンクのときだけ「OK」を押してください。心当たりがなければ「キャンセル」を押してください。')) {
         storageSet(API_URL_STORE, fromLink);
         sessionSet(TOKEN_KEY, '');
